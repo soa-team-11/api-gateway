@@ -1,0 +1,21 @@
+{
+  "name": "api-gateway",
+  "version": "1.0.0",
+  "description": "Config-driven Node.js API Gateway",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.0",
+    "morgan": "^1.10.0",
+    "express-rate-limit": "^7.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
