@@ -14,7 +14,8 @@ const requiredEnv = [
   "AUTH_SERVICE_URL",
   "STAKEHOLDERS_SERVICE_URL",
   "BLOG_SERVICE_URL",
-  "TOUR_SERVICE_URL"
+  "TOUR_SERVICE_URL",
+  "FOLLOWERS_SERVICE_URL"
 ];
 
 requiredEnv.forEach((key) => {
@@ -152,6 +153,45 @@ app.use(
     }
   })
 );
+
+app.use(
+  "/api/followers",
+  createProxyMiddleware({
+    target: process.env.FOLLOWERS_SERVICE_URL,
+    changeOrigin: true,
+    xfwd: true,
+    logLevel: "debug",
+    timeout: 10000,
+    proxyTimeout: 10000,
+    pathRewrite: (path) => {
+      // ensure upstream followers-service gets "/api/followers/..."
+      return "/api/followers" + (path || "");
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      try {
+        console.log(
+          `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.FOLLOWERS_SERVICE_URL}${proxyReq.path || ""}`
+        );
+      } catch (_) {}
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      const target = process.env.FOLLOWERS_SERVICE_URL;
+      console.log(
+        `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+      );
+    },
+    onError: (err, req, res) => {
+      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
+      if (!res.headersSent) {
+        res
+          .status(502)
+          .json({ message: "Gateway failed to reach followers service", error: err.message });
+      }
+    }
+  })
+);
+
+
 
 // Health check
 app.get("/health", (req, res) => res.send("API Gateway is running 🚀"));
