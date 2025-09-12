@@ -7,6 +7,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: "admin"
       MONGO_INITDB_ROOT_PASSWORD: "admin"
       MONGO_INITDB_DATABASE: "auth-db"
+      JWT_SECRET: "soa_team_11"
     ports:
       - "27019:27019"
 
@@ -71,6 +72,9 @@ services:
     environment:
       PORT: 5001
       MONGO_URI: "mongodb://mongo-blog:27016"
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
       AUTH_SERVICE_URL: "http://auth-service:3001"
       STAKEHOLDERS_SERVICE_URL: "http://stakeholders-service:8081"
     depends_on:
@@ -84,10 +88,10 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
-      NEO4J_URI: "neo4j+s://c880d729.databases.neo4j.io"
-      NEO4J_USERNAME: "neo4j"
-      NEO4J_PASSWORD: "R7Lq5276t2xZ37B1dqTRhfLQVJxWInBZgIIzU3oqChc"
-      NEO4J_DATABASE: "neo4j"
+      NEO4J_URI: ${NEO4J_URI}
+      NEO4J_USERNAME: ${NEO4J_USERNAME}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      NEO4J_DATABASE: ${NEO4J_DATABASE}
     depends_on:
       - auth-service
       - stakeholders-service
@@ -115,6 +119,7 @@ services:
       BLOG_SERVICE_URL: "http://blog-service:5001"
       TOUR_SERVICE_URL: "http://tour-service:5002"
       FOLLOWERS_SERVICE_URL: "http://followers-service:3000"
+      JWT_SECRET: "soa_team_11"
     depends_on:
       - auth-service
       - stakeholders-service
