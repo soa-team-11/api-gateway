@@ -8,21 +8,21 @@ import path from "path";
 dotenv.config({ path: path.resolve("config.env") });
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 4000;
 
 const requiredEnv = [
-  "AUTH_SERVICE_URL",
-  "STAKEHOLDERS_SERVICE_URL",
-  "BLOG_SERVICE_URL",
-  "TOUR_SERVICE_URL",
-  "FOLLOWERS_SERVICE_URL"
+    "AUTH_SERVICE_URL",
+    "STAKEHOLDERS_SERVICE_URL",
+    "BLOG_SERVICE_URL",
+    "TOUR_SERVICE_URL",
+    "FOLLOWERS_SERVICE_URL",
 ];
 
 requiredEnv.forEach((key) => {
-  if (!process.env[key]) {
-    console.error(`❌ Missing required environment variable: ${key}`);
-    process.exit(1);
-  }
+    if (!process.env[key]) {
+        console.error(`❌ Missing required environment variable: ${key}`);
+        process.exit(1);
+    }
 });
 
 console.log("Loaded service URLs:");
@@ -34,174 +34,226 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
 
 // Proxy routes
 app.use(
-  "/auth",
-  createProxyMiddleware({
-    target: process.env.AUTH_SERVICE_URL,
-    changeOrigin: true,
-    xfwd: true,
-    timeout: 30000,
-    proxyTimeout: 30000,
-    logLevel: "debug",
-    pathRewrite: (path) => {
-      // Upstream auth service expects the "/auth" prefix
-      return "/auth" + (path || "");
-    },
-    onProxyReq: (proxyReq, req, res) => {
-      try {
-        console.log(`[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.AUTH_SERVICE_URL}${proxyReq.path || ""}`);
-      } catch (_) {}
-    },
-    onProxyRes: (proxyRes, req, res) => {
-      const target = process.env.AUTH_SERVICE_URL;
-      console.log(`[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`);
-    },
-    onError: (err, req, res) => {
-      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
-      if (!res.headersSent) {
-        res.status(502).json({ message: "Gateway failed to reach auth service", error: err.message });
-      }
-    }
-  })
+    "/auth",
+    createProxyMiddleware({
+        target: process.env.AUTH_SERVICE_URL,
+        changeOrigin: true,
+        xfwd: true,
+        timeout: 30000,
+        proxyTimeout: 30000,
+        logLevel: "debug",
+        pathRewrite: (path) => {
+            // Upstream auth service expects the "/auth" prefix
+            return "/auth" + (path || "");
+        },
+        onProxyReq: (proxyReq, req, res) => {
+            try {
+                console.log(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.AUTH_SERVICE_URL
+                    }${proxyReq.path || ""}`
+                );
+            } catch (_) {}
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            const target = process.env.AUTH_SERVICE_URL;
+            console.log(
+                `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+            );
+        },
+        onError: (err, req, res) => {
+            console.error(
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
+                err.message
+            );
+            if (!res.headersSent) {
+                res.status(502).json({
+                    message: "Gateway failed to reach auth service",
+                    error: err.message,
+                });
+            }
+        },
+    })
 );
 
 app.use(
-  "/stakeholders",
-  createProxyMiddleware({
-    target: process.env.STAKEHOLDERS_SERVICE_URL,
-    changeOrigin: true,
-    xfwd: true,
-    timeout: 30000,
-    proxyTimeout: 30000,
-    logLevel: "debug",
-    onProxyReq: (proxyReq, req, res) => {
-      try {
-        console.log(`[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.STAKEHOLDERS_SERVICE_URL}${proxyReq.path || ""}`);
-      } catch (_) {}
-    },
-    onProxyRes: (proxyRes, req, res) => {
-      const target = process.env.STAKEHOLDERS_SERVICE_URL;
-      console.log(`[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`);
-    },
-    onError: (err, req, res) => {
-      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
-      if (!res.headersSent) {
-        res.status(502).json({ message: "Gateway failed to reach stakeholders service", error: err.message });
-      }
-    }
-  })
+    "/stakeholders",
+    createProxyMiddleware({
+        target: process.env.STAKEHOLDERS_SERVICE_URL,
+        changeOrigin: true,
+        xfwd: true,
+        timeout: 30000,
+        proxyTimeout: 30000,
+        logLevel: "debug",
+        onProxyReq: (proxyReq, req, res) => {
+            try {
+                console.log(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.STAKEHOLDERS_SERVICE_URL
+                    }${proxyReq.path || ""}`
+                );
+            } catch (_) {}
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            const target = process.env.STAKEHOLDERS_SERVICE_URL;
+            console.log(
+                `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+            );
+        },
+        onError: (err, req, res) => {
+            console.error(
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
+                err.message
+            );
+            if (!res.headersSent) {
+                res.status(502).json({
+                    message: "Gateway failed to reach stakeholders service",
+                    error: err.message,
+                });
+            }
+        },
+    })
 );
 
 app.use(
-  "/api/blog",
-  createProxyMiddleware({
-    target: process.env.BLOG_SERVICE_URL,
-    changeOrigin: true,
-    xfwd: true,
-    timeout: 30000,
-    proxyTimeout: 30000,
-    logLevel: "debug",
-    pathRewrite: (path) => {
-      return "/api/blog" + (path || "");
-    },
-    onProxyReq: (proxyReq, req, res) => {
-      try {
-        console.log(`[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.BLOG_SERVICE_URL}${proxyReq.path || ""}`);
-      } catch (_) {}
-    },
-    onProxyRes: (proxyRes, req, res) => {
-      const target = process.env.BLOG_SERVICE_URL;
-      console.log(`[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`);
-    },
-    onError: (err, req, res) => {
-      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
-      if (!res.headersSent) {
-        res.status(502).json({ message: "Gateway failed to reach blog service", error: err.message });
-      }
-    }
-  })
+    "/api/blog",
+    createProxyMiddleware({
+        target: process.env.BLOG_SERVICE_URL,
+        changeOrigin: true,
+        xfwd: true,
+        timeout: 30000,
+        proxyTimeout: 30000,
+        logLevel: "debug",
+        pathRewrite: (path) => {
+            return "/api/blog" + (path || "");
+        },
+        onProxyReq: (proxyReq, req, res) => {
+            try {
+                console.log(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.BLOG_SERVICE_URL
+                    }${proxyReq.path || ""}`
+                );
+            } catch (_) {}
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            const target = process.env.BLOG_SERVICE_URL;
+            console.log(
+                `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+            );
+        },
+        onError: (err, req, res) => {
+            console.error(
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
+                err.message
+            );
+            if (!res.headersSent) {
+                res.status(502).json({
+                    message: "Gateway failed to reach blog service",
+                    error: err.message,
+                });
+            }
+        },
+    })
 );
 app.use(
-  "/api/tour",
-  createProxyMiddleware({
-    target: process.env.TOUR_SERVICE_URL,
-    changeOrigin: true,
-    xfwd: true,
-    logLevel: "debug",
-    timeout: 10000,
-    proxyTimeout: 10000,
-    pathRewrite: (path, req) => {
-      // Express strips the mount path ("/api/tour") from req.url when using app.use("/api/tour", ...)
-      // Re-attach it so the upstream receives "/api/tour/..." as expected
-      const rewritten = "/api/tour" + (path || "");
-      return rewritten;
-    },
-    // Let the proxy stream the body directly to avoid request abortion
-    onProxyReq: (proxyReq, req, res) => {
-      try {
-        console.log(`[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL}${proxyReq.path || ""}`);
-      } catch (_) {}
-    },
-    onProxyRes: (proxyRes, req, res) => {
-      const target = process.env.TOUR_SERVICE_URL;
-      console.log(`[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`);
-    },
-    onError: (err, req, res) => {
-      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
-      if (!res.headersSent) {
-        res.status(502).json({ message: "Gateway failed to reach tour service", error: err.message });
-      }
-    }
-  })
+    "/api/tour",
+    createProxyMiddleware({
+        target: process.env.TOUR_SERVICE_URL,
+        changeOrigin: true,
+        xfwd: true,
+        logLevel: "debug",
+        timeout: 10000,
+        proxyTimeout: 10000,
+        pathRewrite: (path, req) => {
+            // Express strips the mount path ("/api/tour") from req.url when using app.use("/api/tour", ...)
+            // Re-attach it so the upstream receives "/api/tour/..." as expected
+            const rewritten = "/api/tour" + (path || "");
+            return rewritten;
+        },
+        // Let the proxy stream the body directly to avoid request abortion
+        onProxyReq: (proxyReq, req, res) => {
+            try {
+                console.log(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.TOUR_SERVICE_URL
+                    }${proxyReq.path || ""}`
+                );
+            } catch (_) {}
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            const target = process.env.TOUR_SERVICE_URL;
+            console.log(
+                `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+            );
+        },
+        onError: (err, req, res) => {
+            console.error(
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
+                err.message
+            );
+            if (!res.headersSent) {
+                res.status(502).json({
+                    message: "Gateway failed to reach tour service",
+                    error: err.message,
+                });
+            }
+        },
+    })
 );
 
 app.use(
-  "/api/followers",
-  createProxyMiddleware({
-    target: process.env.FOLLOWERS_SERVICE_URL,
-    changeOrigin: true,
-    xfwd: true,
-    logLevel: "debug",
-    timeout: 10000,
-    proxyTimeout: 10000,
-    pathRewrite: (path) => {
-      // ensure upstream followers-service gets "/api/followers/..."
-      return "/api/followers" + (path || "");
-    },
-    onProxyReq: (proxyReq, req, res) => {
-      try {
-        console.log(
-          `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.FOLLOWERS_SERVICE_URL}${proxyReq.path || ""}`
-        );
-      } catch (_) {}
-    },
-    onProxyRes: (proxyRes, req, res) => {
-      const target = process.env.FOLLOWERS_SERVICE_URL;
-      console.log(
-        `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
-      );
-    },
-    onError: (err, req, res) => {
-      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
-      if (!res.headersSent) {
-        res
-          .status(502)
-          .json({ message: "Gateway failed to reach followers service", error: err.message });
-      }
-    }
-  })
+    "/api/followers",
+    createProxyMiddleware({
+        target: process.env.FOLLOWERS_SERVICE_URL,
+        changeOrigin: true,
+        xfwd: true,
+        logLevel: "debug",
+        timeout: 10000,
+        proxyTimeout: 10000,
+        pathRewrite: (path) => {
+            // ensure upstream followers-service gets "/api/followers/..."
+            return "/api/followers" + (path || "");
+        },
+        onProxyReq: (proxyReq, req, res) => {
+            try {
+                console.log(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.FOLLOWERS_SERVICE_URL
+                    }${proxyReq.path || ""}`
+                );
+            } catch (_) {}
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            const target = process.env.FOLLOWERS_SERVICE_URL;
+            console.log(
+                `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+            );
+        },
+        onError: (err, req, res) => {
+            console.error(
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
+                err.message
+            );
+            if (!res.headersSent) {
+                res.status(502).json({
+                    message: "Gateway failed to reach followers service",
+                    error: err.message,
+                });
+            }
+        },
+    })
 );
-
-
 
 // Health check
 app.get("/health", (req, res) => res.send("API Gateway is running 🚀"));
 
 // Global error handler to avoid hanging responses
 app.use((err, req, res, next) => {
-  console.error("[Gateway] Unhandled error:", err);
-  if (!res.headersSent) {
-    res.status(500).json({ message: "Gateway internal error" });
-  }
+    console.error("[Gateway] Unhandled error:", err);
+    if (!res.headersSent) {
+        res.status(500).json({ message: "Gateway internal error" });
+    }
 });
 
 // Start server

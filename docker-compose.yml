@@ -1,9 +1,123 @@
-FROM node:18-alpine
+services:
+  mongo-auth:
+    image: mongo:latest
+    container_name: mongo-auth
+    command: [ "mongod", "--port", "27019" ]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "admin"
+      MONGO_INITDB_ROOT_PASSWORD: "admin"
+      MONGO_INITDB_DATABASE: "auth-db"
+    ports:
+      - "27019:27019"
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --only=production
-COPY . .
+  mongo-stakeholders:
+    image: mongo:latest
+    container_name: mongo-stakeholders
+    command: [ "mongod", "--port", "27018" ]
+    environment:
+      MONGO_INITDB_DATABASE: "stakeholders"
+    ports:
+      - "27018:27018"
 
-EXPOSE 8080
-CMD ["npm", "start"]
+  mongo-tour:
+    image: mongo:latest
+    container_name: mongo-tour
+    command: [ "mongod", "--port", "27017" ]
+    environment:
+      MONGO_INITDB_DATABASE: "tour"
+    ports:
+      - "27017:27017"
+
+  mongo-blog:
+    image: mongo:latest
+    container_name: mongo-blog
+    command: [ "mongod", "--port", "27016" ]
+    environment:
+      MONGO_INITDB_DATABASE: "blog"
+    ports:
+      - "27016:27016"
+
+  auth-service:
+    build: ../auth-service
+    container_name: auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      MONGO_URI: "mongodb://admin:admin@mongo-auth:27019"
+      MONGO_DB: "auth-db"
+      STAKEHOLDERS_SERVICE_URL: "http://stakeholders-service:8081"
+    depends_on:
+      - mongo-auth
+      - stakeholders-service
+
+  stakeholders-service:
+    build: ../stakeholders-service
+    container_name: stakeholders-service
+    ports:
+      - "8081:8081"
+    environment:
+      PORT: 8081
+      MONGO_URI: "mongodb://mongo-stakeholders:27018"
+      MONGO_DB: "stakeholders"
+    depends_on:
+      - mongo-stakeholders
+
+  blog-service:
+    build: ../blog-service
+    container_name: blog-service
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: 5001
+      MONGO_URI: "mongodb://mongo-blog:27016"
+      AUTH_SERVICE_URL: "http://auth-service:3001"
+      STAKEHOLDERS_SERVICE_URL: "http://stakeholders-service:8081"
+    depends_on:
+      - auth-service
+      - stakeholders-service
+
+  followers-service:
+    build: ../followers-service
+    container_name: followers-service
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NEO4J_URI: "neo4j+s://c880d729.databases.neo4j.io"
+      NEO4J_USERNAME: "neo4j"
+      NEO4J_PASSWORD: "R7Lq5276t2xZ37B1dqTRhfLQVJxWInBZgIIzU3oqChc"
+      NEO4J_DATABASE: "neo4j"
+    depends_on:
+      - auth-service
+      - stakeholders-service
+
+  tour-service:
+    build: ../tour-service
+    container_name: tour-service
+    ports:
+      - "5002:5002"
+    environment:
+      PORT: 5002
+      STAKEHOLDERS_SERVICE_URL: "http://stakeholders-service:8081"
+      MONGO_URI: "mongodb://mongo-tour:27017"
+    depends_on:
+      - stakeholders-service
+
+  api-gateway:
+    build: .
+    container_name: api-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      AUTH_SERVICE_URL: "http://auth-service:3001"
+      STAKEHOLDERS_SERVICE_URL: "http://stakeholders-service:8081"
+      BLOG_SERVICE_URL: "http://blog-service:5001"
+      TOUR_SERVICE_URL: "http://tour-service:5002"
+      FOLLOWERS_SERVICE_URL: "http://followers-service:3000"
+    depends_on:
+      - auth-service
+      - stakeholders-service
+      - blog-service
+      - tour-service
+      - followers-service
