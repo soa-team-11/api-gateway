@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import dotenv from "dotenv";
 import path from "path";
+import jwt from "jsonwebtoken";
 
 dotenv.config({ path: path.resolve("config.env") });
 
@@ -31,6 +32,29 @@ requiredEnv.forEach((key) => console.log(`${key} = ${process.env[key]}`));
 // Middleware
 app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
+
+const verifyJWT = (req, res, next) => {
+    // Exclude the authentication service routes from JWT check
+    if (req.originalUrl.startsWith("/auth")) {
+        return next();
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded; // Attach user information to the request object
+        next();
+    } catch (err) {
+        console.error("[Gateway] JWT verification failed:", err.message);
+        return res.status(403).json({ message: "Invalid or expired token" });
+    }
+};
+app.use(verifyJWT);
 
 // Proxy routes
 app.use(
@@ -211,10 +235,7 @@ app.use(
         logLevel: "debug",
         timeout: 10000,
         proxyTimeout: 10000,
-        pathRewrite: (path) => {
-            // ensure upstream followers-service gets "/api/followers/..."
-            return "/api/followers" + (path || "");
-        },
+        pathRewrite: { "^/api/followers": "" },
         onProxyReq: (proxyReq, req, res) => {
             try {
                 console.log(
