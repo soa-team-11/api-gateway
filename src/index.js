@@ -16,7 +16,8 @@ const requiredEnv = [
   "STAKEHOLDERS_SERVICE_URL",
   "BLOG_SERVICE_URL",
   "TOUR_SERVICE_URL",
-  "FOLLOWERS_SERVICE_URL"
+  "FOLLOWERS_SERVICE_URL",
+  "PAYMENTS_SERVICE_URL"
 ];
 
 requiredEnv.forEach((key) => {
@@ -197,6 +198,43 @@ app.use(
     },
     onProxyRes: (proxyRes, req, res) => {
       const target = process.env.FOLLOWERS_SERVICE_URL;
+      console.log(
+        `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
+      );
+    },
+    onError: (err, req, res) => {
+      console.error(`[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`, err.message);
+      if (!res.headersSent) {
+        res
+          .status(502)
+          .json({ message: "Gateway failed to reach followers service", error: err.message });
+      }
+    }
+  })
+);
+
+app.use(
+  "/api/carts",
+  createProxyMiddleware({
+    target: process.env.PAYMENTS_SERVICE_URL,
+    changeOrigin: true,
+    xfwd: true,
+    logLevel: "debug",
+    timeout: 10000,
+    proxyTimeout: 10000,
+   pathRewrite: (path, req) => {
+      const rewritten = "/api/carts" + (path || "");
+      return rewritten;
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      try {
+        console.log(
+          `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.PAYMENTS_SERVICE_URL}${proxyReq.path || ""}`
+        );
+      } catch (_) {}
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      const target = process.env.PAYMENTS_SERVICE_URL;
       console.log(
         `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
       );
