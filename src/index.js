@@ -2,6 +2,7 @@ import express from "express";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
+import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import jwt from "jsonwebtoken";
@@ -33,6 +34,15 @@ requiredEnv.forEach((key) => console.log(`${key} = ${process.env[key]}`));
 app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
 
+app.use(
+    cors({
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true,
+    })
+);
+
 const verifyJWT = (req, res, next) => {
     // Exclude the authentication service routes from JWT check
     if (req.originalUrl.startsWith("/auth")) {
@@ -54,6 +64,7 @@ const verifyJWT = (req, res, next) => {
         return res.status(403).json({ message: "Invalid or expired token" });
     }
 };
+
 app.use(verifyJWT);
 
 // Proxy routes
