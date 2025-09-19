@@ -1,5 +1,5 @@
 import express from "express";
-import morgan from "morgan";
+import { logger, morganMiddleware } from "./logger.js";
 import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import cors from "cors";
@@ -23,18 +23,17 @@ const requiredEnv = [
     "PAYMENTS_SERVICE_URL",
 ];
 
-requiredEnv.forEach((key) => {
-    if (!process.env[key]) {
-        console.error(`❌ Missing required environment variable: ${key}`);
-        process.exit(1);
-    }
-});
+const missingVars = requiredEnv.filter((key) => !process.env[key]);
 
-console.log("Loaded service URLs:");
-requiredEnv.forEach((key) => console.log(`${key} = ${process.env[key]}`));
+if (missingVars.length > 0) {
+    logger.fatal("Missing required environment variables", { missingVars });
+    process.exit(1);
+}
+
+logger.info("Loaded all service URLs");
 
 // Middleware
-app.use(morgan("dev"));
+app.use(morganMiddleware);
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
 
 app.use(
@@ -63,7 +62,7 @@ const verifyJWT = (req, res, next) => {
         req.user = decoded; // Attach user information to the request object
         next();
     } catch (err) {
-        console.error("[Gateway] JWT verification failed:", err.message);
+        logger.warn({ err }, "[Gateway] JWT verification failed");
         return res.status(403).json({ message: "Invalid or expired token" });
     }
 };
@@ -85,22 +84,23 @@ app.use(
         },
         onProxyReq: (proxyReq, req, res) => {
             try {
-                console.log(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.AUTH_SERVICE_URL
+                logger.info(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.AUTH_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.AUTH_SERVICE_URL;
-            console.log(
+            logger.info(
                 `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
             );
         },
         onError: (err, req, res) => {
-            console.error(
-                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
-                err.message
+            logger.error(
+                { err },
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`
             );
             if (!res.headersSent) {
                 res.status(502).json({
@@ -147,22 +147,23 @@ app.use(
         logLevel: "debug",
         onProxyReq: (proxyReq, req, res) => {
             try {
-                console.log(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.STAKEHOLDERS_SERVICE_URL
+                logger.info(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.STAKEHOLDERS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.STAKEHOLDERS_SERVICE_URL;
-            console.log(
+            logger.info(
                 `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
             );
         },
         onError: (err, req, res) => {
-            console.error(
-                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
-                err.message
+            logger.error(
+                { err },
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`
             );
             if (!res.headersSent) {
                 res.status(502).json({
@@ -188,22 +189,23 @@ app.use(
         },
         onProxyReq: (proxyReq, req, res) => {
             try {
-                console.log(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.BLOG_SERVICE_URL
+                logger.info(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.BLOG_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.BLOG_SERVICE_URL;
-            console.log(
+            logger.info(
                 `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
             );
         },
         onError: (err, req, res) => {
-            console.error(
-                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
-                err.message
+            logger.error(
+                { err },
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`
             );
             if (!res.headersSent) {
                 res.status(502).json({
@@ -232,22 +234,23 @@ app.use(
         // Let the proxy stream the body directly to avoid request abortion
         onProxyReq: (proxyReq, req, res) => {
             try {
-                console.log(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL
+                logger.info(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.TOUR_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.TOUR_SERVICE_URL;
-            console.log(
+            logger.info(
                 `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
             );
         },
         onError: (err, req, res) => {
-            console.error(
-                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
-                err.message
+            logger.error(
+                { err },
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`
             );
             if (!res.headersSent) {
                 res.status(502).json({
@@ -271,22 +274,23 @@ app.use(
         pathRewrite: { "^/api/followers": "" },
         onProxyReq: (proxyReq, req, res) => {
             try {
-                console.log(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.FOLLOWERS_SERVICE_URL
+                logger.info(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.FOLLOWERS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.FOLLOWERS_SERVICE_URL;
-            console.log(
+            logger.info(
                 `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
             );
         },
         onError: (err, req, res) => {
-            console.error(
-                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
-                err.message
+            logger.error(
+                { err },
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`
             );
             if (!res.headersSent) {
                 res.status(502).json({
@@ -313,22 +317,23 @@ app.use(
         },
         onProxyReq: (proxyReq, req, res) => {
             try {
-                console.log(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.PAYMENTS_SERVICE_URL
+                logger.info(
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
+                        process.env.PAYMENTS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.PAYMENTS_SERVICE_URL;
-            console.log(
+            logger.info(
                 `[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`
             );
         },
         onError: (err, req, res) => {
-            console.error(
-                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`,
-                err.message
+            logger.error(
+                { err },
+                `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`
             );
             if (!res.headersSent) {
                 res.status(502).json({
@@ -345,11 +350,11 @@ app.get("/health", (req, res) => res.send("API Gateway is running 🚀"));
 
 // Global error handler to avoid hanging responses
 app.use((err, req, res, next) => {
-    console.error("[Gateway] Unhandled error:", err);
+    logger.error({ err }, "[Gateway] Unhandled error");
     if (!res.headersSent) {
         res.status(500).json({ message: "Gateway internal error" });
     }
 });
 
 // Start server
-app.listen(PORT, () => console.log(`API Gateway running on port ${PORT}`));
+app.listen(PORT, () => logger.info(`API Gateway running on port ${PORT}`));
