@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package blog;
+
+service BlogService {
+  rpc Create (CreateRequest) returns (CreateResponse);
+}
+
+message CreateRequest {
+  string author = 1;
+  string title = 2;
+  string description = 3;
+  repeated string images = 4; 
+}
+
+message Blog {
+  string id = 1;
+  string author = 2;
+  string title = 3;
+  string description = 4;
+  repeated string images = 5; 
+}
+
+message CreateResponse {
+  Blog blog = 1;
+  string message = 2;
+}

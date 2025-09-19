@@ -6,8 +6,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import jwt from "jsonwebtoken";
+import grpc from "@grpc/grpc-js";
+import protoLoader from "@grpc/proto-loader";
 
-dotenv.config({ path: path.resolve("config.env") });
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -66,7 +68,6 @@ const verifyJWT = (req, res, next) => {
 };
 
 app.use(verifyJWT);
-
 // Proxy routes
 app.use(
     "/auth",
@@ -88,7 +89,7 @@ app.use(
                         process.env.AUTH_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
-            } catch (_) {}
+            } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.AUTH_SERVICE_URL;
@@ -111,6 +112,30 @@ app.use(
     })
 );
 
+const PROTO_PATH = path.resolve("proto/blog.proto");
+const packageDef = protoLoader.loadSync(PROTO_PATH, {});
+const grpcObj = grpc.loadPackageDefinition(packageDef);
+const blogPackage = grpcObj.blog;
+
+const blogClient = new blogPackage.BlogService(
+    process.env.BLOG_SERVICE_GRPC_HOST,
+    grpc.credentials.createInsecure()
+);
+
+app.post("/api/blog", express.json({ limit: "50mb" }), (req, res) => {
+    const { author, title, description, images } = req.body;
+    console.log("stigo")
+
+    blogClient.Create({ author, title, description, images }, (err, response) => {
+        if (err) {
+            console.error("[Gateway] gRPC CreateBlog error:", err);
+            return res.status(err.code === grpc.status.NOT_FOUND ? 404 : 500).json({ message: err.message });
+        }
+
+        res.status(201).json(response);
+    });
+});
+
 app.use(
     "/stakeholders",
     createProxyMiddleware({
@@ -127,7 +152,7 @@ app.use(
                         process.env.STAKEHOLDERS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
-            } catch (_) {}
+            } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.STAKEHOLDERS_SERVICE_URL;
@@ -169,7 +194,7 @@ app.use(
                         process.env.BLOG_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
-            } catch (_) {}
+            } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.BLOG_SERVICE_URL;
@@ -214,7 +239,7 @@ app.use(
                         process.env.TOUR_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
-            } catch (_) {}
+            } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.TOUR_SERVICE_URL;
@@ -254,7 +279,7 @@ app.use(
                         process.env.FOLLOWERS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
-            } catch (_) {}
+            } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.FOLLOWERS_SERVICE_URL;
@@ -297,7 +322,7 @@ app.use(
                         process.env.PAYMENTS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
-            } catch (_) {}
+            } catch (_) { }
         },
         onProxyRes: (proxyRes, req, res) => {
             const target = process.env.PAYMENTS_SERVICE_URL;
