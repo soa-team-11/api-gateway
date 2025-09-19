@@ -1,6 +1,6 @@
 import express from "express";
 import morgan from "morgan";
-import logger from "./logger";
+import logger from "./logger.js";
 import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import cors from "cors";
