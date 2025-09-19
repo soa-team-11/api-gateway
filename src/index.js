@@ -1,6 +1,5 @@
 import express from "express";
-import morgan from "morgan";
-import logger from "./logger.js";
+import { logger, morganMiddleware } from "./logger.js";
 import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import cors from "cors";
@@ -32,7 +31,7 @@ if (missingVars.length > 0) {
 logger.info("Loaded all service URLs");
 
 // Middleware
-app.use(morgan("dev"));
+app.use(morganMiddleware);
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
 
 app.use(
