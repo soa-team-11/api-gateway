@@ -135,6 +135,20 @@ app.post("/api/blog", express.json({ limit: "50mb" }), (req, res) => {
         res.status(201).json(response);
     });
 });
+app.post("/api/blog/comment", express.json(), (req, res) => {
+  const { blogId, author, text } = req.body;
+
+  blogClient.PostComment({ blogId, author, text }, (err, response) => {
+    if (err) {
+      console.error("[Gateway] gRPC PostComment error:", err);
+      return res
+        .status(err.code === grpc.status.NOT_FOUND ? 404 : 500)
+        .json({ message: err.message });
+    }
+
+    res.status(201).json(response);
+  });
+});
 
 app.use(
     "/stakeholders",
