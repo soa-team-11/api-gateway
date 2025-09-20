@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package tour;
+
+message Duration {
+  string transportType = 1; // "walking", "bicycle", "car"
+  int32 minutes = 2;
+}
+
+message KeyPoint {
+  string name = 1;
+  string description = 2;
+  double latitude = 3;
+  double longitude = 4;
+  string image = 5; // optional
+}
+
+message CreateTourRequest {
+  string author = 1;
+  string title = 2;
+  string description = 3;
+  string difficulty = 4;
+  double price = 5;
+  repeated string tags = 6;
+  repeated KeyPoint keyPoints = 7;
+  repeated Duration durations = 8;
+  double length = 9;
+}
+
+message CreateTourResponse {
+  string message = 1;
+  Tour tour = 2;
+}
+
+message Tour {
+  string id = 1;
+  string author = 2;
+  string title = 3;
+  string description = 4;
+  string difficulty = 5;
+  double price = 6;
+  repeated string tags = 7;
+  repeated KeyPoint keyPoints = 8;
+  repeated Duration durations = 9;
+  double length = 10;
+  string createdAt = 11;
+}
+
+service TourService {
+  rpc CreateTour(CreateTourRequest) returns (CreateTourResponse);
+}

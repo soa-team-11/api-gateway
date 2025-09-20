@@ -46,7 +46,6 @@ app.use(
 );
 
 const verifyJWT = (req, res, next) => {
-    // Exclude the authentication service routes from JWT check
     if (req.originalUrl.startsWith("/auth")) {
         return next();
     }
@@ -59,7 +58,7 @@ const verifyJWT = (req, res, next) => {
     const token = authHeader.split(" ")[1];
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // Attach user information to the request object
+        req.user = decoded; 
         next();
     } catch (err) {
         logger.warn({ err }, "[Gateway] JWT verification failed");
@@ -68,7 +67,7 @@ const verifyJWT = (req, res, next) => {
 };
 
 app.use(verifyJWT);
-// Proxy routes
+
 app.use(
     "/auth",
     createProxyMiddleware({
@@ -79,7 +78,6 @@ app.use(
         proxyTimeout: 30000,
         logLevel: "debug",
         pathRewrite: (path) => {
-            // Upstream auth service expects the "/auth" prefix
             return "/auth" + (path || "");
         },
         onProxyReq: (proxyReq, req, res) => {
@@ -149,6 +147,36 @@ app.post("/api/blog/comment", express.json(), (req, res) => {
     res.status(201).json(response);
   });
 });
+
+const TOUR_PROTO_PATH = path.resolve("proto/tour.proto");
+const tourPackageDef = protoLoader.loadSync(TOUR_PROTO_PATH, {});
+const tourGrpcObj = grpc.loadPackageDefinition(tourPackageDef);
+const tourPackage = tourGrpcObj.tour;
+
+const tourClient = new tourPackage.TourService(
+  process.env.TOUR_SERVICE_GRPC_HOST,
+  grpc.credentials.createInsecure()
+);
+
+app.post("/api/tour", express.json({ limit: "50mb" }), (req, res) => {
+  const { author, title, description, difficulty, price, tags, keyPoints, durations, length } =
+    req.body;
+
+  tourClient.CreateTour(
+    { author, title, description, difficulty, price, tags, keyPoints, durations, length },
+    (err, response) => {
+      if (err) {
+        console.error("[Gateway] gRPC CreateTour error:", err);
+        return res
+          .status(err.code === grpc.status.NOT_FOUND ? 404 : 500)
+          .json({ message: err.message });
+      }
+
+      res.status(201).json(response);
+    }
+  );
+});
+
 
 app.use(
     "/stakeholders",
@@ -240,12 +268,9 @@ app.use(
         timeout: 10000,
         proxyTimeout: 10000,
         pathRewrite: (path, req) => {
-            // Express strips the mount path ("/api/tour") from req.url when using app.use("/api/tour", ...)
-            // Re-attach it so the upstream receives "/api/tour/..." as expected
             const rewritten = "/api/tour" + (path || "");
             return rewritten;
         },
-        // Let the proxy stream the body directly to avoid request abortion
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
@@ -359,7 +384,6 @@ app.use(
     })
 );
 
-// Health check
 app.get("/health", (req, res) => res.send("API Gateway is running 🚀"));
 
 // Global error handler to avoid hanging responses
@@ -370,5 +394,4 @@ app.use((err, req, res, next) => {
     }
 });
 
-// Start server
 app.listen(PORT, () => logger.info(`API Gateway running on port ${PORT}`));
