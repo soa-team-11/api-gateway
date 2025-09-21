@@ -4,6 +4,8 @@ package blog;
 
 service BlogService {
   rpc Create (CreateRequest) returns (CreateResponse);
+  rpc PostComment (PostCommentRequest) returns (PostCommentResponse); 
+
 }
 
 message CreateRequest {
@@ -22,6 +24,24 @@ message Blog {
 }
 
 message CreateResponse {
+  Blog blog = 1;
+  string message = 2;
+}
+
+message Comment {
+  string id = 1;
+  string author = 2;
+  string text = 3;
+  string createdAt = 4;
+}
+
+message PostCommentRequest {
+  string blogId = 1;
+  string author = 2;
+  string text = 3;
+}
+
+message PostCommentResponse {
   Blog blog = 1;
   string message = 2;
 }
