@@ -58,7 +58,7 @@ const verifyJWT = (req, res, next) => {
     const token = authHeader.split(" ")[1];
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; 
+        req.user = decoded;
         next();
     } catch (err) {
         logger.warn({ err }, "[Gateway] JWT verification failed");
@@ -83,8 +83,7 @@ app.use(
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
-                        process.env.AUTH_SERVICE_URL
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.AUTH_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
@@ -133,19 +132,21 @@ app.post("/api/blog", express.json({ limit: "50mb" }), (req, res) => {
         res.status(201).json(response);
     });
 });
+
 app.patch("/api/blog/comment", express.json(), (req, res) => {
   const { blogId, author, text } = req.body;
 
-  blogClient.PostComment({ blogId, author, text }, (err, response) => {
-    if (err) {
-      console.error("[Gateway] gRPC PostComment error:", err);
-      return res
-        .status(err.code === grpc.status.NOT_FOUND ? 404 : 500)
-        .json({ message: err.message });
-    }
 
-    res.status(201).json(response);
-  });
+    blogClient.PostComment({ blogId, author, text }, (err, response) => {
+        if (err) {
+            console.error("[Gateway] gRPC PostComment error:", err);
+            return res
+                .status(err.code === grpc.status.NOT_FOUND ? 404 : 500)
+                .json({ message: err.message });
+        }
+
+        res.status(201).json(response);
+    });
 });
 
 const TOUR_PROTO_PATH = path.resolve("proto/tour.proto");
@@ -154,27 +155,27 @@ const tourGrpcObj = grpc.loadPackageDefinition(tourPackageDef);
 const tourPackage = tourGrpcObj.tour;
 
 const tourClient = new tourPackage.TourService(
-  process.env.TOUR_SERVICE_GRPC_HOST,
-  grpc.credentials.createInsecure()
+    process.env.TOUR_SERVICE_GRPC_HOST,
+    grpc.credentials.createInsecure()
 );
 
 app.post("/api/tour", express.json({ limit: "50mb" }), (req, res) => {
-  const { author, title, description, difficulty, price, tags, keyPoints, durations, length } =
-    req.body;
+    const { author, title, description, difficulty, price, tags, keyPoints, durations, length } =
+        req.body;
 
-  tourClient.CreateTour(
-    { author, title, description, difficulty, price, tags, keyPoints, durations, length },
-    (err, response) => {
-      if (err) {
-        console.error("[Gateway] gRPC CreateTour error:", err);
-        return res
-          .status(err.code === grpc.status.NOT_FOUND ? 404 : 500)
-          .json({ message: err.message });
-      }
+    tourClient.CreateTour(
+        { author, title, description, difficulty, price, tags, keyPoints, durations, length },
+        (err, response) => {
+            if (err) {
+                console.error("[Gateway] gRPC CreateTour error:", err);
+                return res
+                    .status(err.code === grpc.status.NOT_FOUND ? 404 : 500)
+                    .json({ message: err.message });
+            }
 
-      res.status(201).json(response);
-    }
-  );
+            res.status(201).json(response);
+        }
+    );
 });
 
 
@@ -190,8 +191,7 @@ app.use(
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
-                        process.env.STAKEHOLDERS_SERVICE_URL
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.STAKEHOLDERS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
@@ -232,8 +232,7 @@ app.use(
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
-                        process.env.BLOG_SERVICE_URL
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.BLOG_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
@@ -274,8 +273,7 @@ app.use(
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
-                        process.env.TOUR_SERVICE_URL
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
@@ -302,6 +300,31 @@ app.use(
 );
 
 app.use(
+    "/api/tour-execution",
+    createProxyMiddleware({
+        target: process.env.TOUR_SERVICE_URL,
+        changeOrigin: true,
+        xfwd: true,
+        logLevel: "debug",
+        timeout: 10000,
+        proxyTimeout: 10000,
+        pathRewrite: (path) => "/api/tour-execution" + (path || ""),
+        onProxyReq: (proxyReq, req, res) => {
+            logger.info(`[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${target}${proxyReq.path || ""}`);
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            logger.info(`[Gateway] ${req.method} ${req.originalUrl} -> ${target} (status: ${proxyRes.statusCode})`);
+        },
+        onError: (err, req, res) => {
+            logger.error({ err }, `[Gateway] Proxy error for ${req.method} ${req.originalUrl}:`);
+            if (!res.headersSent) {
+                res.status(502).json({ message: "Gateway failed to reach tour service", error: err.message });
+            }
+        },
+    })
+);
+
+app.use(
     "/api/followers",
     createProxyMiddleware({
         target: process.env.FOLLOWERS_SERVICE_URL,
@@ -314,8 +337,7 @@ app.use(
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
-                        process.env.FOLLOWERS_SERVICE_URL
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.FOLLOWERS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
@@ -357,8 +379,7 @@ app.use(
         onProxyReq: (proxyReq, req, res) => {
             try {
                 logger.info(
-                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${
-                        process.env.PAYMENTS_SERVICE_URL
+                    `[Gateway] forwarding ${req.method} ${req.originalUrl} -> ${process.env.PAYMENTS_SERVICE_URL
                     }${proxyReq.path || ""}`
                 );
             } catch (_) { }
