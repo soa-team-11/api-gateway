@@ -154,7 +154,11 @@ const tourPackage = tourGrpcObj.tour;
 
 const tourClient = new tourPackage.TourService(
     process.env.TOUR_SERVICE_GRPC_HOST,
-    grpc.credentials.createInsecure()
+    grpc.credentials.createInsecure(),
+    {
+        'grpc.max_send_message_length': 50 * 1024 * 1024, // 50 MB
+        'grpc.max_receive_message_length': 50 * 1024 * 1024, // 50 MB
+    }
 );
 
 app.post("/api/tour", express.json({ limit: "50mb" }), (req, res) => {
