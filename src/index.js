@@ -132,8 +132,10 @@ app.post("/api/blog", express.json({ limit: "50mb" }), (req, res) => {
         res.status(201).json(response);
     });
 });
-app.post("/api/blog/comment", express.json(), (req, res) => {
-    const { blogId, author, text } = req.body;
+
+app.patch("/api/blog/comment", express.json(), (req, res) => {
+  const { blogId, author, text } = req.body;
+
 
     blogClient.PostComment({ blogId, author, text }, (err, response) => {
         if (err) {
