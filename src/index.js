@@ -116,8 +116,23 @@ const blogPackage = grpcObj.blog;
 
 const blogClient = new blogPackage.BlogService(
     process.env.BLOG_SERVICE_GRPC_HOST,
-    grpc.credentials.createInsecure()
+    grpc.credentials.createInsecure(),
+    {
+        'grpc.max_send_message_length': 50 * 1024 * 1024, // 50 MB
+        'grpc.max_receive_message_length': 50 * 1024 * 1024, // 50 MB
+    }
 );
+
+app.get("/api/blog", (req, res) => {
+    blogClient.GetAll({}, (err, response) => {
+        if (err) {
+            console.error("[Gateway] gRPC GetAll error:", err);
+            return res.status(500).json({ message: err.message });
+        }
+
+        res.status(200).json(response);
+    });
+});
 
 app.post("/api/blog", express.json({ limit: "50mb" }), (req, res) => {
     const { author, title, description, images } = req.body;
@@ -134,7 +149,7 @@ app.post("/api/blog", express.json({ limit: "50mb" }), (req, res) => {
 });
 
 app.patch("/api/blog/comment", express.json(), (req, res) => {
-  const { blogId, author, text } = req.body;
+    const { blogId, author, text } = req.body;
 
 
     blogClient.PostComment({ blogId, author, text }, (err, response) => {
